@@ -1,0 +1,31 @@
+{
+  "name": "blood-donor-finder",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Blood Donor Finder: React and Express with feature-based RCSM modules and MongoDB.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "node --test",
+    "test:postman": "newman run postman/Blood-Donor-Finder.postman_collection.json --bail",
+    "db:dev": "node scripts/mongo-local.js",
+    "data:migrate": "node scripts/migrate-json.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "joi": "^17.13.3",
+    "mongoose": "^8.19.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "newman": "^6.2.3",
+    "nodemon": "^3.1.10",
+    "mongodb-memory-server-core": "^10.2.3"
+  },
+  "main": "index.js"
+}

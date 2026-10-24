@@ -1,0 +1,9 @@
+node_modules/
+data/*.json
+data/*.tmp
+.env
+coverage/
+.cache/
+.local-mongo/
+.env.local
+.DS_Store

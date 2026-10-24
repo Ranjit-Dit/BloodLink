@@ -1,0 +1,32 @@
+{
+  "name": "blood-donor-finder-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "axios": "^1.13.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.0",
+    "react-icons": "^5.4.0",
+    "react-router-dom": "^7.0.2",
+    "react-toastify": "^11.0.1",
+    "yup": "^1.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react-swc": "^3.7.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.3.6"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

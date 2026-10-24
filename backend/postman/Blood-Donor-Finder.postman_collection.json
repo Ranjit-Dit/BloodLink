@@ -1,0 +1,1130 @@
+{
+  "info": {
+    "_postman_id": "468e663c-3ba7-45ee-9f3e-957e8b47e01f",
+    "name": "Blood Donor Finder - Local API",
+    "description": "Ordered end-to-end checks for the lightweight Express backend. Start the server and run all requests in order. The first request creates unique run variables; the final requests remove the three donors and one blood request created by this run. No real communication is sent. If a run is stopped before cleanup, remove its test records using the stored ID variables. O+ query values are URL-encoded as O%2B.\nCanonical API prefix: /api/v1. Records are stored in MongoDB through Mongoose. Backend uses Route -> Controller -> Service -> Model.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Health and initialize this run",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const runId = Date.now().toString() + Math.floor(Math.random() * 10000).toString().padStart(4, '0');",
+              "const suffix = runId.slice(-9);",
+              "pm.collectionVariables.set('runId', runId);",
+              "pm.collectionVariables.set('city', 'Test City ' + runId);",
+              "pm.collectionVariables.set('cityLower', ('Test City ' + runId).toLowerCase());",
+              "pm.collectionVariables.set('cityQuery', encodeURIComponent(('Test City ' + runId).toLowerCase()));",
+              "pm.collectionVariables.set('otherCity', 'Other City ' + runId);",
+              "pm.collectionVariables.set('donorPhone', '9' + suffix);",
+              "pm.collectionVariables.set('formattedDonorPhone', '9' + suffix.slice(0, 4) + ' ' + suffix.slice(4));",
+              "pm.collectionVariables.set('secondPhone', '8' + suffix);",
+              "pm.collectionVariables.set('thirdPhone', '7' + suffix);",
+              "pm.collectionVariables.set('requesterPhone', '6' + suffix);",
+              "['donorId', 'wrongGroupDonorId', 'wrongCityDonorId', 'requestId'].forEach(function (key) { pm.collectionVariables.unset(key); });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('API is healthy', function () { pm.expect(body.data.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/health",
+        "description": "Run this request first. It prepares unique test phones, cities, and variables for the complete workflow. Run the whole collection in order to clean up test records at the end."
+      },
+      "response": []
+    },
+    {
+      "name": "02 - Reject invalid blood group",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Asha Rao\",\n  \"bloodGroup\": \"X+\",\n  \"phone\": \"{{donorPhone}}\",\n  \"city\": \"{{city}}\",\n  \"area\": \"Central Ward\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03 - Reject unknown donor fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Asha Rao\",\n  \"bloodGroup\": \"O+\",\n  \"phone\": \"{{donorPhone}}\",\n  \"city\": \"{{city}}\",\n  \"area\": \"Central Ward\",\n  \"extraField\": \"not allowed\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04 - Create matching donor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Donor defaults and normalized group', function () {",
+              "  pm.expect(body.data.id).to.be.a('string').and.not.empty;",
+              "  pm.expect(body.data.bloodGroup).to.eql('O+');",
+              "  pm.expect(body.data.city).to.eql(pm.collectionVariables.get('city'));",
+              "  pm.expect(body.data.name).to.eql('Asha Rao');",
+              "  pm.expect(body.data.available).to.eql(true);",
+              "  pm.expect(body.data.phone).to.eql(pm.collectionVariables.get('donorPhone'));",
+              "  pm.expect(body.data.createdAt).to.be.a('string');",
+              "  pm.expect(body.data.updatedAt).to.be.a('string');",
+              "});",
+              "pm.collectionVariables.set('donorId', body.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"  Asha  Rao  \",\n  \"bloodGroup\": \"o+\",\n  \"phone\": \"{{donorPhone}}\",\n  \"city\": \"  Test   City {{runId}}  \",\n  \"area\": \"Central Ward\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "05 - Get donor by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Correct donor', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('donorId')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "06 - Reject duplicate normalized phone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Asha Rao\",\n  \"bloodGroup\": \"O+\",\n  \"phone\": \"{{formattedDonorPhone}}\",\n  \"city\": \"{{city}}\",\n  \"area\": \"Central Ward\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07 - Create donor with different group",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.collectionVariables.set('wrongGroupDonorId', body.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Ravi Shah\",\n  \"bloodGroup\": \"B+\",\n  \"phone\": \"{{secondPhone}}\",\n  \"city\": \"{{city}}\",\n  \"area\": \"Central Ward\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08 - Create donor in different city",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.collectionVariables.set('wrongCityDonorId', body.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Meera Das\",\n  \"bloodGroup\": \"O+\",\n  \"phone\": \"{{thirdPhone}}\",\n  \"city\": \"{{otherCity}}\",\n  \"area\": \"Central Ward\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09 - Filter available donors by exact group and city",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "",
+              "pm.test('Only the matching donor is returned', function () {",
+              "  pm.expect(body.data.map(function (donor) { return donor.id; })).to.eql([pm.collectionVariables.get('donorId')]);",
+              "  body.data.forEach(function (donor) { pm.expect(donor.bloodGroup).to.eql('O+'); pm.expect(donor.available).to.eql(true); pm.expect(donor.city.toLowerCase()).to.eql(pm.collectionVariables.get('cityLower')); });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors?bloodGroup=O%2B&city={{cityQuery}}&available=true",
+        "description": "O+ is encoded as O%2B so the + is preserved. The run-specific city avoids assumptions about existing stored donors."
+      },
+      "response": []
+    },
+    {
+      "name": "10 - Filter unavailable donors before availability change",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "pm.test('No unavailable test donors yet', function () { pm.expect(body.data).to.eql([]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors?city={{cityQuery}}&available=false"
+      },
+      "response": []
+    },
+    {
+      "name": "11 - Update donor details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Profile updated and phone normalized', function () { pm.expect(body.data.area).to.eql('North Ward'); pm.expect(body.data.phone).to.eql(pm.collectionVariables.get('donorPhone')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"area\": \"North Ward\",\n  \"phone\": \"{{formattedDonorPhone}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12 - Reject non-boolean availability",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}/availability",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"available\": \"false\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "13 - Reject unknown update fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"unknown\": \"value\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "14 - Reject empty donor update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "15 - Reject invalid availability filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors?available=yes"
+      },
+      "response": []
+    },
+    {
+      "name": "16 - Reject invalid requested units",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/requests",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patientName\": \"Sample Patient\",\n  \"bloodGroup\": \"O+\",\n  \"city\": \"{{city}}\",\n  \"hospital\": \"City Hospital\",\n  \"requesterName\": \"Sample Coordinator\",\n  \"phone\": \"{{requesterPhone}}\",\n  \"units\": 0,\n  \"message\": \"Please contact the hospital desk.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "17 - Create urgent blood request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Request defaults to open and urgent', function () {",
+              "  pm.expect(body.data.id).to.be.a('string').and.not.empty;",
+              "  pm.expect(body.data.status).to.eql('open');",
+              "  pm.expect(body.data.urgency).to.eql('urgent');",
+              "  pm.expect(body.data.units).to.eql(2);",
+              "});",
+              "pm.collectionVariables.set('requestId', body.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/requests",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patientName\": \"Sample Patient\",\n  \"bloodGroup\": \"O+\",\n  \"city\": \"{{city}}\",\n  \"hospital\": \"City Hospital\",\n  \"requesterName\": \"Sample Coordinator\",\n  \"phone\": \"{{requesterPhone}}\",\n  \"units\": 2,\n  \"message\": \"Please contact the hospital desk.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "18 - Get blood request by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Correct blood request', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('requestId')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "19 - Filter open urgent requests by group and city",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "pm.test('Created request is returned', function () { pm.expect(body.data.map(function (request) { return request.id; })).to.eql([pm.collectionVariables.get('requestId')]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests?bloodGroup=O%2B&city={{cityQuery}}&status=open&urgency=urgent"
+      },
+      "response": []
+    },
+    {
+      "name": "20 - Find matching donors and communication text",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "",
+              "pm.test('Only available exact group and city donor matches', function () {",
+              "  pm.expect(body.data.length).to.eql(1);",
+              "  pm.expect(body.data[0].id).to.eql(pm.collectionVariables.get('donorId'));",
+              "  pm.expect(body.data[0].phone).to.eql(pm.collectionVariables.get('donorPhone'));",
+              "  pm.expect(body.data[0].bloodGroup).to.eql('O+');",
+              "  pm.expect(body.data[0].available).to.eql(true);",
+              "});",
+              "pm.test('Contact message includes the request details', function () {",
+              "  const message = body.data[0].contactMessage;",
+              "  pm.expect(message).to.be.a('string').and.not.empty;",
+              "  ['Sample Coordinator', 'Sample Patient', '2', 'O+', 'City Hospital', pm.collectionVariables.get('city'), pm.collectionVariables.get('requesterPhone'), 'Please contact the hospital desk.'].forEach(function (value) { pm.expect(message).to.include(value); });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}/matches",
+        "description": "The API prepares a contact message and returns the donor phone. It does not send an SMS or place a call."
+      },
+      "response": []
+    },
+    {
+      "name": "21 - Mark donor unavailable",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Donor is unavailable', function () { pm.expect(body.data.available).to.eql(false); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}/availability",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"available\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "22 - Exclude unavailable donors from matches",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "pm.test('No available exact match remains', function () { pm.expect(body.data).to.eql([]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}/matches"
+      },
+      "response": []
+    },
+    {
+      "name": "23 - Find unavailable donor with availability filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "pm.test('Unavailable donor is found', function () { pm.expect(body.data.map(function (donor) { return donor.id; })).to.eql([pm.collectionVariables.get('donorId')]); pm.expect(body.data[0].available).to.eql(false); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors?bloodGroup=O%2B&city={{cityQuery}}&available=false"
+      },
+      "response": []
+    },
+    {
+      "name": "24 - Restore donor availability",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Donor is available', function () { pm.expect(body.data.available).to.eql(true); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}/availability",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"available\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "25 - Reject unsupported request status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"pending\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "26 - Reject unknown request update fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"fulfilled\",\n  \"extraField\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "27 - Mark blood request fulfilled",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Request is fulfilled', function () { pm.expect(body.data.status).to.eql('fulfilled'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"fulfilled\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "28 - Filter fulfilled requests",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('List count matches data', function () { pm.expect(body.data).to.be.an('array'); pm.expect(body.count).to.eql(body.data.length); });",
+              "pm.test('Fulfilled request is listed', function () { pm.expect(body.data.map(function (request) { return request.id; })).to.eql([pm.collectionVariables.get('requestId')]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests?city={{cityQuery}}&status=fulfilled"
+      },
+      "response": []
+    },
+    {
+      "name": "29 - Reject matching for a closed request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}/matches"
+      },
+      "response": []
+    },
+    {
+      "name": "30 - Delete blood request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Deleted request ID returned', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('requestId')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "31 - Deleted request returns 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/requests/{{requestId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "32 - Delete matching donor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });",
+              "pm.test('Deleted donor ID returned', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('donorId')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "33 - Deleted donor returns 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors/{{donorId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "34 - Delete different-group test donor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors/{{wrongGroupDonorId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "35 - Delete different-city test donor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Success envelope', function () { pm.expect(body.success).to.eql(true); pm.expect(body).to.have.property('data'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/donors/{{wrongCityDonorId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "36 - Unknown endpoint returns JSON 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+              "const body = pm.response.json();",
+              "pm.test('Error envelope', function () { pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/unknown-endpoint"
+      },
+      "response": []
+    }
+  ]
+}

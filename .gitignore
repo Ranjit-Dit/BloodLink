@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+coverage/
+frontend/dist/
+backend/.cache/
+backend/.local-mongo/
+backend/data/*.tmp

@@ -1,0 +1,47 @@
+Blood Donor Finder v2 - reference-style implementation verification
+Date: 24 October 2026
+
+Reference backend: Ranjit-Dit/Ecommerce-Website commit 14e2083.
+Reference frontend: sandesh-bhattarai/react-33 commit 4d806a6.
+
+Backend: CommonJS, Express 4, feature RCSM modules, Joi, Mongoose 8.
+Database: real MongoDB 8.0.17, persistent local development server.
+Frontend: React 18, Vite 6/SWC, Router 7, Axios, Hook Form/Yup, Toastify,
+React Icons, Tailwind 3; feature services, pages and shared components.
+
+Verification:
+- npm test: 16 MongoDB integration tests passed, 0 failures.
+- Includes database persistence, atomic phone uniqueness under concurrent
+  requests, strict validation, exact matching, API aliases and SPA fallback.
+- npm run test:postman: 36 canonical /api/v1 requests, 98 assertions passed
+  via Newman, 0 failures. Desktop Postman was not rerun for this v2 build.
+- npm run build: production React build passed.
+- Browser checks: route navigation/direct reload, client form validation,
+  donor create/edit/availability/delete, request create/match/fulfil/delete,
+  copying contact text, blood group/city filtering and responsive layouts.
+- Desktop (1440) and mobile (390) had no horizontal document overflow.
+- Temporary browser-test donor and request records were removed.
+- Legacy JSON migration imported 4 donors and 1 request; a second run
+  imported 0 additional records and preserved the original JSON source.
+- Original React/MVC snapshot SHA-256 remains unchanged:
+  ab67654a9d8e240e2ce9b0bc8a1f73b4a3c040cee154bef718f4dd402c474a4b
+
+App: http://127.0.0.1:3000
+API: http://127.0.0.1:3000/api/v1
+MongoDB: mongodb://127.0.0.1:27017
+
+MongoDB data files, downloaded binaries and node_modules are not bundled.
+The ZIP includes built React assets and retained JSON migration data.
+See README.md for installation, MongoDB startup and Postman instructions.
+
+Folder reorganization verification - 24 October 2026:
+- Project root: bloodlink/ with sibling frontend/ and backend/ packages.
+- Backend serves the built React app from ../frontend/dist/.
+- Frontend: npm run build passed from frontend/.
+- Backend: npm test passed all 16 integration tests from backend/.
+- Backend: npm run test:postman passed 36 requests and 98 assertions
+  through Newman from backend/.
+- HTTP checks passed for /, /donors, /requests, the built JavaScript asset,
+  /api/v1/health, /api/v1/donors and /api/v1/requests.
+- Existing MongoDB files were moved with the backend and reopened.
+- README installation, environment and run paths match the new layout.
