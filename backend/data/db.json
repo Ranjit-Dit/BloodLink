@@ -1,0 +1,65 @@
+{
+  "donors": [
+    {
+      "id": "0e5915a0-cac2-4b3d-91a3-874ea2c27fc3",
+      "area": "Shivajinagar",
+      "available": true,
+      "name": "Asha Rao",
+      "bloodGroup": "O+",
+      "phone": "+12025550101",
+      "city": "Pune",
+      "createdAt": "2026-10-24T09:00:54.755Z",
+      "updatedAt": "2026-10-24T09:00:54.755Z"
+    },
+    {
+      "id": "a9a8c9bb-2f86-4762-8cfa-e7216264c120",
+      "area": "Kothrud",
+      "available": true,
+      "name": "Kabir Shah",
+      "bloodGroup": "B+",
+      "phone": "+12025550102",
+      "city": "Pune",
+      "createdAt": "2026-10-24T09:00:54.758Z",
+      "updatedAt": "2026-10-24T09:00:54.758Z"
+    },
+    {
+      "id": "8db887a2-bc1d-4764-8bf8-eb8a19d02bd4",
+      "area": "Baner",
+      "available": true,
+      "name": "Meera Nair",
+      "bloodGroup": "O+",
+      "phone": "+12025550103",
+      "city": "Pune",
+      "createdAt": "2026-10-24T09:00:54.760Z",
+      "updatedAt": "2026-10-24T09:00:54.760Z"
+    },
+    {
+      "id": "ce9b2a04-0b44-41fc-b59e-35de48a0688c",
+      "area": "Dadar",
+      "available": false,
+      "name": "Arjun Patel",
+      "bloodGroup": "AB-",
+      "phone": "+12025550104",
+      "city": "Mumbai",
+      "createdAt": "2026-10-24T09:00:54.761Z",
+      "updatedAt": "2026-10-24T09:00:54.761Z"
+    }
+  ],
+  "requests": [
+    {
+      "id": "57e9ecfe-19e8-4841-ac09-3b8cd0566222",
+      "patientName": "Sample Patient",
+      "bloodGroup": "O+",
+      "city": "Pune",
+      "hospital": "Demo City Hospital",
+      "requesterName": "Sample Coordinator",
+      "phone": "+12025550105",
+      "units": 2,
+      "urgency": "urgent",
+      "message": "Fictional demo request. For testing only.",
+      "status": "open",
+      "createdAt": "2026-10-24T09:00:54.765Z",
+      "updatedAt": "2026-10-24T09:00:54.765Z"
+    }
+  ]
+}

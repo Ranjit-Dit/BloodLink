@@ -7,7 +7,7 @@ const connectDatabase = async ({ mongoUri, dbName } = {}) => {
     if (mongoose.connection.name !== name) throw new Error('A different database is already connected in this process.');
     return mongoose.connection;
   }
-  await mongoose.connect(uri, { dbName: name, serverSelectionTimeoutMS: 5000, autoIndex: true });
+  await mongoose.connect(uri, { dbName: name, serverSelectionTimeoutMS: 5000, maxPoolSize: 5, minPoolSize: 0, autoIndex: true });
   return mongoose.connection;
 };
 

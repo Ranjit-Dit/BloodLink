@@ -8,7 +8,7 @@ const DonorModel = require('../modules/donor/donor.model');
 const BloodRequestModel = require('../modules/blood-request/blood-request.model');
 const { notFound, errorHandler } = require('../middlewares/error-handler.middleware');
 
-const createApp = async ({ mongoUri, dbName, frontendDir = path.resolve(__dirname, '../../../frontend/dist') } = {}) => {
+const createApp = async ({ mongoUri, dbName, frontendDir = path.resolve(__dirname, '../../../frontend/dist'), serveFrontend = true } = {}) => {
   await connectDatabase({ mongoUri, dbName });
   // Build unique indexes before accepting concurrent registrations.
   await Promise.all([DonorModel.createIndexes(), BloodRequestModel.createIndexes()]);
@@ -21,12 +21,14 @@ const createApp = async ({ mongoUri, dbName, frontendDir = path.resolve(__dirnam
   application.use('/api/v1', router);
   application.use('/api', router); // Retains compatibility with the original Postman collection.
   application.use('/api', notFound);
-  application.use(express.static(frontendDir));
-  application.get('*', (req, res, next) => {
-    const indexFile = path.join(frontendDir, 'index.html');
-    if (!path.extname(req.path) && req.accepts('html') && fs.existsSync(indexFile)) return res.sendFile(indexFile);
-    return next();
-  });
+  if (serveFrontend) {
+    application.use(express.static(frontendDir));
+    application.get('*', (req, res, next) => {
+      const indexFile = path.join(frontendDir, 'index.html');
+      if (!path.extname(req.path) && req.accepts('html') && fs.existsSync(indexFile)) return res.sendFile(indexFile);
+      return next();
+    });
+  }
   application.use(notFound);
   application.use(errorHandler);
   return application;

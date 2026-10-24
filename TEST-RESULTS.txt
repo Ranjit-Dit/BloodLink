@@ -31,7 +31,9 @@ API: http://127.0.0.1:3000/api/v1
 MongoDB: mongodb://127.0.0.1:27017
 
 MongoDB data files, downloaded binaries and node_modules are not bundled.
-The ZIP includes built React assets and retained JSON migration data.
+Runnable ZIPs include built React assets and retained JSON migration data.
+GitHub source ZIPs omit the generated frontend/dist directory; use the
+documented frontend build command after installing dependencies.
 See README.md for installation, MongoDB startup and Postman instructions.
 
 Folder reorganization verification - 24 October 2026:
@@ -45,3 +47,29 @@ Folder reorganization verification - 24 October 2026:
   /api/v1/health, /api/v1/donors and /api/v1/requests.
 - Existing MongoDB files were moved with the backend and reopened.
 - README installation, environment and run paths match the new layout.
+
+Vercel preparation verification - 24 October 2026:
+- Added one Vercel function adapter while retaining backend RCSM modules.
+- MongoDB pool is reused by warm function requests with maxPoolSize 5.
+- npm test: 22 tests passed, including Vercel adapter lifecycle coverage.
+- Adapter checks cover missing configuration, recovery, concurrent initial
+  requests, real MongoDB writes, JSON API errors and no function SPA serving.
+- npm run build: React production build passed.
+- Production deployment completed on Vercel with MongoDB Atlas connected.
+
+Production hosting verification - 24 October 2026:
+Website: https://bloodlink-dun-beta.vercel.app
+API: https://bloodlink-dun-beta.vercel.app/api/v1
+Deployment: dpl_ER81piPxW3m2pXcohLYcbFTwLUwP
+- Production deployment reached READY on Vercel using Node.js 22.x.
+- Public website, /donors, /requests and built JS/CSS returned HTTP 200.
+- A missing static asset returned HTTP 404.
+- /api/v1/health returned HTTP 200 with status ok after connecting to Atlas.
+- The complete Postman collection passed against the production URL through
+  Newman: 36 requests, 98 assertions, 0 failures, 17.8 seconds.
+- Live coverage included donor/request CRUD, normalization and validation,
+  filtering, phone uniqueness, availability, matching, status changes and
+  JSON 404 responses. The collection deleted its temporary records.
+- MongoDB credentials remain in Vercel environment variables and are not
+  included in source files or the frontend build.
+- Production.postman_environment.json supplies the hosted baseUrl.

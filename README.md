@@ -2,6 +2,8 @@
 
 A small React and Express project for finding available blood donors by blood group and city, registering donors, and managing blood requests. The backend follows **Route → Controller → Service → Model (RCSM)**; React supplies the View. MongoDB stores donors and requests.
 
+Live website: **https://bloodlink-dun-beta.vercel.app**. The production API is at **https://bloodlink-dun-beta.vercel.app/api/v1**, with MongoDB Atlas configured through Vercel environment variables.
+
 ## Reference structure and packages
 
 The project follows the coding conventions of [Ranjit-Dit/Ecommerce-Website](https://github.com/Ranjit-Dit/Ecommerce-Website/tree/14e2083) for the backend and [sandesh-bhattarai/react-33](https://github.com/sandesh-bhattarai/react-33/tree/4d806a6) for the frontend, adapted to this project's features.
@@ -16,6 +18,8 @@ The project follows the coding conventions of [Ranjit-Dit/Ecommerce-Website](htt
 Ecommerce-specific authentication, payment, upload, cloud-image, and chat packages are omitted because this project does not use those features. The reference repositories are not runtime dependencies.
 
 ## Run locally
+
+For Vercel deployment, see [DEPLOYMENT.md](DEPLOYMENT.md). Deploy the `bloodlink/` root; its Vercel adapter runs the existing backend as a function and serves the React build from the same domain. A hosted MongoDB connection is required.
 
 Install **Node.js 22.12 or newer**. From the `bloodlink/` project folder, install both packages and build React:
 
@@ -65,7 +69,7 @@ These defaults also work without a `backend/.env` file. Backend scripts load tha
 | `backend/` | `npm test` | Run backend integration tests against isolated test databases |
 | `backend/` | `npm run test:postman` | Run the Postman collection through Newman |
 
-During development, leave MongoDB running and run `cd backend` then `npm run dev` in a terminal opened at `bloodlink/`. In another terminal opened at `bloodlink/`, run `cd frontend` then `npm run dev`, and open port 5173. Vite proxies `/api` requests to Express on port 3000. Update the proxy target in `frontend/vite.config.js` if changing the backend port. Set `VITE_BASE_URL` in `frontend/.env` to override the frontend API base URL; it defaults to `/api/v1`. The frontend and backend have separate `package.json` files; there is no root package.
+During development, leave MongoDB running and run `cd backend` then `npm run dev` in a terminal opened at `bloodlink/`. In another terminal opened at `bloodlink/`, run `cd frontend` then `npm run dev`, and open port 5173. Vite proxies `/api` requests to Express on port 3000. Update the proxy target in `frontend/vite.config.js` if changing the backend port. Set `VITE_BASE_URL` in `frontend/.env` to override the frontend API base URL; it defaults to `/api/v1`. The frontend and backend have separate `package.json` files. The root package supplies `npm run build`, `npm start`, and `npm test` shortcuts and selects Node.js 22.x for Vercel.
 
 ## Existing JSON data and snapshots
 
@@ -96,6 +100,8 @@ The previously delivered React/MVC snapshot ZIP is unchanged. To try this versio
 3. Select the **Blood Donor Finder - Local** environment (`baseUrl`: `http://127.0.0.1:3000`).
 4. Open **Blood Donor Finder - Local API**, choose **Run**, and keep all requests selected in their numbered order.
 5. Set **Iterations** to **1**, run the collection, and review its assertions.
+
+For the hosted site, import `backend/postman/Production.postman_environment.json` instead of the local environment and select **Blood Donor Finder - Production**. It points the same collection to the live Vercel API.
 
 The collection creates unique dummy donors and a request, saves their IDs, and removes its records during cleanup. Run the full collection in order. If you stop before cleanup, use the saved IDs with the final DELETE requests. It checks filtering, availability, matching, contact drafts, phone uniqueness, validation, status changes, deletion, and missing records.
 
@@ -200,8 +206,15 @@ HTTP codes: `200` read/update/delete; `201` create; `400` invalid fields, query 
 ```text
 bloodlink/
 ├── .gitignore
+├── .vercelignore
 ├── README.md
+├── DEPLOYMENT.md
 ├── TEST-RESULTS.txt
+├── package.json                      Root build/start/test shortcuts
+├── package-lock.json
+├── vercel.json                       Vercel build and routing configuration
+├── api/
+│   └── index.js                      Vercel function adapter
 ├── backend/
 │   ├── .env.example
 │   ├── .gitignore
@@ -305,4 +318,3 @@ bloodlink/
 A donor registration follows `donor.router.js` → Joi validation → `donor.controller.js` → `donor.service.js` → `donor.model.js` → MongoDB. Controllers handle HTTP; services enforce business rules; models define persistence. React calls the same API as Postman through Axios feature services.
 
 This is a local learning project with manual availability and city-based matching. Matching identical blood groups does not establish medical eligibility or clinical compatibility. Contact information is visible without authentication; use fictional data for testing.
-# BloodLink
